@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoalBreaker Pro - Daily Micro-Tasks</title>
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --accent: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --card-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            --border: #e2e8f0;
+        }
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem; }
+        h1 { 
+            background: var(--accent); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            font-size: 2.5rem; 
+            text-align: center; 
+            margin-bottom: 1rem; 
+        }
+        .input-section { 
+            background: var(--bg-secondary); 
+            padding: 2rem; 
+            border-radius: 20px; 
+            box-shadow: var(--card-shadow); 
+            margin-bottom: 2rem; 
+        }
+        .input-group { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+        input, select, button { 
+            padding: 0.75rem 1rem; 
+            border: 2px solid var(--border); 
+            border-radius: 12px; 
+            font-size: 1rem; 
+            transition: all 0.3s ease; 
+        }
+        input:focus, select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+        button { 
+            background: var(--accent); 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: 600; 
+            min-width: 150px; 
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 15px 35px rgba(102,126,234,0.4); }
+        .tasks-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+        .task-card { 
+            background: var(--bg-secondary); 
+            padding: 1.5rem; 
+            border-radius: 16px; 
+            box-shadow: var(--card-shadow); 
+            transition: all 0.3s ease; 
+            border-left: 5px solid var(--accent); 
+        }
+        .task-card.completed { 
+            opacity: 0.7; 
+            transform: scale(0.98); 
+            border-left-color: var(--success); 
+        }
+        .task-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .day-badge { background: var(--accent); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.875rem; font-weight: 600; }
+        .task-checkbox { transform: scale(1.5); accent-color: var(--success); cursor: pointer; }
+        .streak-display { text-align: center; padding: 2rem; background: var(--bg-secondary); border-radius: 20px; box-shadow: var(--card-shadow); margin: 2rem 0; }
+        .streak-num { font-size: 4rem; font-weight: 800; background: var(--accent); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .badges { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
+        .badge { padding: 0.5rem 1rem; border-radius: 25px; font-size: 0.875rem; font-weight: 600; }
+        .badge-bronze { background: linear-gradient(45deg, #cd7f32, #f4a261); color: white; }
+        .badge-silver { background: linear-gradient(45deg, #c0c0c0, #e5e5e5); color: #333; }
+        .badge-gold { background: linear-gradient(45deg, #ffd700, #ffed4a); color: #333; }
+        .controls { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin: 2rem 0; }
+        .toggle { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+        .sun-icon, .moon-icon { font-size: 1.5rem; }
+        @keyframes confetti { 0% { transform: translateY(100vh) rotate(0); opacity: 1; } 100% { transform: translateY(-10vh) rotate(720deg); opacity: 0; } }
+        .confetti { position: fixed; width: 10px; height: 10px; background: var(--accent); top: 0; left: 50%; animation: confetti 2s ease-out forwards; pointer-events: none; z-index: 1000; }
+        @media (max-width: 768px) { .container { padding: 1rem; } h1 { font-size: 2rem; } }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 GoalBreaker Pro</h1>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <input type="text" id="goalInput" placeholder="e.g., Build a React Native productivity app" maxlength="200">
+                <input type="number" id="daysInput" placeholder="30" min="7" max="365" value="30">
+                <input type="range" id="effortInput" min="1" max="10" value="5">
+                <span id="effortValue">Effort: 5/10</span>
+            </div>
+            <button onclick="generateTasks()">🚀 Generate Daily Tasks</button>
+        </div>
+
+        <div class="streak-display" id="streakDisplay" style="display: none;">
+            <div class="streak-num" id="streakNum">0</div>
+            <div>Day Streak 🔥</div>
+            <div class="badges" id="badges"></div>
+        </div>
+
+        <div class="controls">
+            <label class="toggle" onclick="toggleDarkMode()">
+                <span class="sun-icon" id="sunIcon">☀️</span>
+                <span>Dark Mode</span>
+                <span class="moon-icon" id="moonIcon">🌙</span>
+            </label>
+            <button onclick="enableNotifications()">🔔 Enable Daily Reminders</button>
+            <button onclick="exportToCalendar()">📅 Export to Google Calendar</button>
+            <button onclick="clearAllData()">🗑️ Clear All Data</button>
+        </div>
+
+        <div class="tasks-grid" id="tasksGrid"></div>
+    </div>
+
+    <script>
+        // State management
+        let goals = JSON.parse(localStorage.getItem('goalbreaker_goals')) || [];
+        let currentStreak = parseInt(localStorage.getItem('goalbreaker_streak')) || 0;
+        let notificationsEnabled = localStorage.getItem('goalbreaker_notifications') === 'true';
+        let theme = localStorage.getItem('goalbreaker_theme') || 'light';
+
+        // Templates for task generation (rule-based, no AI)
+        const taskTemplates = {
+            'build app': ['Research requirements', 'Set up development environment', 'Design wireframes', 'Create basic UI', 'Implement core features', 'Add animations', 'Test functionality', 'Fix bugs', 'Polish UI', 'Deploy to store'],
+            'learn skill': ['Watch intro videos', 'Read documentation', 'Practice basic exercises', 'Build mini-project', 'Debug common errors', 'Advanced concepts', 'Real-world application', 'Review & optimize'],
+            'fitness': ['Warm-up routine', 'Basic exercises', 'Increase intensity', 'Add cardio', 'Track measurements', 'Recovery day', 'Challenge workout'],
+            'study': ['Read chapters 1-2', 'Take notes', 'Solve practice problems', 'Review key concepts', 'Mock exam', 'Deep dive topics']
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.setAttribute('data-theme', theme);
+            updateMoonSun();
+            loadGoals();
+            updateStreakDisplay();
+            updateEffortDisplay();
+        });
+
+        function generateTasks() {
+            const goal = document.getElementById('goalInput').value.trim();
+            const days = parseInt(document.getElementById('daysInput').value);
+            const effort = parseInt(document.getElementById('effortInput').value);
+
+            if (!goal) {
+                alert('Enter a goal first! 🎯');
+                return;
+            }
+
+            // Simple rule-based breakdown
+            let baseTasks = [];
+            const lowerGoal = goal.toLowerCase();
+            for (let key in taskTemplates) {
+                if (lowerGoal.includes(key)) {
+                    baseTasks = taskTemplates[key];
+                    break;
+                }
+            }
+            if (baseTasks.length === 0) {
+                baseTasks = ['Research basics', 'Practice fundamentals', `Daily practice (${days} days)`, 'Build small project', 'Review progress', 'Advanced application', 'Polish & optimize'];
+            }
+
+            // Expand to daily tasks
+            const dailyTasks = [];
+            const tasksPerDay = Math.ceil(baseTasks.length / days) + effort;
+            for (let day = 1; day <= days; day++) {
+                for (let i = 0; i < tasksPerDay; i++) {
+                    const taskIndex = Math.floor((day - 1 + i * days) % baseTasks.length);
+                    dailyTasks.push({
+                        id: Date.now() + day + i,
+                        day: day,
+                        description: `${baseTasks[taskIndex]} (Day ${day})`,
+                        duration: `${Math.floor(30 + effort * 5)} mins`,
+                        completed: false,
+                        date: new Date(Date.now() + (day - 1) * 86400000).toISOString().split('T')[0]
+                    });
+                }
+            }
+
+            goals = [{ goal, days, effort, tasks: dailyTasks.slice(0, 20), created: new Date().toISOString() }];
+            saveGoals();
+            loadGoals();
+            document.getElementById('goalInput').value = '';
+        }
+
+        function loadGoals() {
+            const grid = document.getElementById('tasksGrid');
+            grid.innerHTML = '';
+
+            if (goals.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; opacity: 0.5;"><h2>No goals yet!</h2><p>Create your first goal above 🚀</p></div>';
+                return;
+            }
+
+            const currentGoal = goals[0];
+            currentGoal.tasks.forEach(task => {
+                const card = createTaskCard(task);
+                grid.appendChild(card);
+            });
+
+            updateStreakDisplay();
+        }
+
+        function createTaskCard(task) {
+            const div = document.createElement('div');
+            div.className = `task-card ${task.completed ? 'completed' : ''}`;
+            div.innerHTML = `
+                <div class="task-header">
+                    <span class="day-badge">Day ${task.day}</span>
+                    <span>${task.duration}</span>
+                </div>
+                <label style="display: block; cursor: pointer; font-size: 1.1rem;">
+                    <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})">
+                    ${task.description}
+                </label>
+            `;
+            return div;
+        }
+
+        function toggleTask(id) {
+            goals[0].tasks.forEach(task => {
+                if (task.id === id) {
+                    task.completed = !task.completed;
+                    if (task.completed) {
+                        currentStreak++;
+                        showConfetti();
+                    } else {
+                        currentStreak = 0;
+                    }
+                    saveGoals();
+                    updateStreakDisplay();
+                    loadGoals();
+                }
+            });
+        }
+
+        function updateStreakDisplay() {
+            const display = document.getElementById('streakDisplay');
+            const num = document.getElementById('streakNum');
+            const badgesEl = document.getElementById('badges');
+
+            num.textContent = currentStreak;
+            display.style.display = 'block';
+
+            badgesEl.innerHTML = '';
+            if (currentStreak >= 7) badgesEl.innerHTML += '<span class="badge badge-bronze">🥉 Bronze</span>';
+            if (currentStreak >= 14) badgesEl.innerHTML += '<span class="badge badge-silver">🥈 Silver</span>';
+            if (currentStreak >= 21) badgesEl.innerHTML += '<span class="badge badge-gold">🥇 Gold</span>';
+
+            localStorage.setItem('goalbreaker_streak', currentStreak);
+        }
+
+        function showConfetti() {
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = (Math.random() * 100) + '%';
+                    confetti.style.background = `hsl(${Math.random() * 360}, 70%, 60%)`;
+                    confetti.style.animationDelay = (i * 0.1) + 's';
+                    document.body.appendChild(confetti);
+                    setTimeout(() => confetti.remove(), 2000);
+                }, i * 50);
+            }
+        }
+
+        function toggleDarkMode() {
+            theme = theme === 'light' ? 'dark' : 'light';
+            document.body.setAttribute('data-theme', theme);
+            localStorage.setItem('goalbreaker_theme', theme);
+            updateMoonSun();
+        }
+
+        function updateMoonSun() {
+            document.getElementById('sunIcon').style.opacity = theme === 'light' ? '1' : '0.3';
+            document.getElementById('moonIcon').style.opacity = theme === 'dark' ? '1' : '0.3';
+        }
+
+        function enableNotifications() {
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        notificationsEnabled = true;
+                        localStorage.setItem('goalbreaker_notifications', 'true');
+                        alert('✅ Daily reminders enabled! Check tomorrow.');
+                        // Schedule first notification
+                        setTimeout(() => notifyDaily(), 5000); // Test in 5s
+                    }
+                });
+            }
+        }
+
+        function notifyDaily() {
+            if (notificationsEnabled && Notification.permission === 'granted') {
+                new Notification('GoalBreaker Reminder', {
+                    body: `Today\'s tasks await! Current streak: ${currentStreak} 🔥`,
+                    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjUiIGN5PSIyNSIgcj0iMjUiIGZpbGw9IiM2NjdlZWEiLz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+CjxwYXRoIGQ9Im0xMiA2IDMtMyAzIDMiLz4KPHBhdGggZD0ibTEyIDE4IDMgMyAzLTMiLz4KPC9zdmc+Cjwvc3ZnPgo='
+                });
+            }
+        }
+
+        async function exportToCalendar() {
+            // Simplified ICS export (full Google API needs OAuth setup - see console for code snippet)
+            let ics = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//GoalBreaker//Tasks//EN\n';
+            goals[0].tasks.forEach(task => {
+                const date = new Date(task.date);
+                ics += `BEGIN:VEVENT\nUID:${task.id}@goalbreaker\nDTSTART:${date.toISOString().replace(/[:-]/g, '').slice(0,-5)}Z\nSUMMARY:${task.description}\nDTEND:${date.toISOString().replace(/[:-]/g, '').slice(0,-5)}Z\nEND:VEVENT\n`;
+            });
+            ics += 'END:VCALENDAR';
+            
+            const blob = new Blob([ics], { type: 'text/calendar' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'goalbreaker-tasks.ics';
+            a.click();
+            
+            console.log('%c📅 Google Calendar API Setup (for full integration):', 'font-size: 16px; color: #4285f4;');
+            console.log('// 1. Get API key/Client ID: https://console.cloud.google.com');
+            console.log('// 2. Enable Calendar API');
+            console.log('// 3. Use gapi.client.calendar.events.insert() with OAuth');
+            console.log('// Full code: https://developers.google.com/calendar/api/quickstart/js [web:44]');
+        }
+
+        function saveGoals() {
+            localStorage.setItem('goalbreaker_goals', JSON.stringify(goals));
+            localStorage.setItem('goalbreaker_streak', currentStreak.toString());
+        }
+
+        function clearAllData() {
+            if (confirm('Clear all goals, streaks, and data? 😢')) {
+                localStorage.removeItem('goalbreaker_goals');
+                localStorage.removeItem('goalbreaker_streak');
+                localStorage.removeItem('goalbreaker_theme');
+                goals = [];
+                currentStreak = 0;
+                loadGoals();
+            }
+        }
+
+        function updateEffortDisplay() {
+            const slider = document.getElementById('effortInput');
+            const value = document.getElementById('effortValue');
+            slider.oninput = () => value.textContent = `Effort: ${slider.value}/10`;
+        }
+    </script>
+</body>
+</html>
