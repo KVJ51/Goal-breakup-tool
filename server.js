@@ -6,13 +6,23 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('./models/User');
 
+const { MongoMemoryServer } = require('mongodb-memory-server');
+
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(express.static(__dirname));
 
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('MongoDB Connected'))
-    .catch(err => console.log('MongoDB Connection Error: ', err));
+// Start in-memory MongoDB
+async function startDB() {
+    const mongoServer = await MongoMemoryServer.create();
+    const mongoUri = mongoServer.getUri();
+    
+    mongoose.connect(mongoUri)
+        .then(() => console.log('MongoDB In-Memory Server Connected at: ' + mongoUri))
+        .catch(err => console.log('MongoDB Connection Error: ', err));
+}
+startDB();
 
 const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
