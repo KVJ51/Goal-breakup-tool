@@ -1113,6 +1113,129 @@
             background: var(--border2);
             border-radius: 3px;
         }
+        /* =====================
+           VISUAL ROADMAP OVERRIDE
+           ===================== */
+        #milestones-list {
+            position: relative;
+            padding: 40px 0;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        #milestones-list::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 4px;
+            background: var(--border);
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+
+        .milestone-item {
+            position: relative;
+            width: calc(50% - 40px);
+            margin-bottom: 40px;
+            background: var(--bg) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            border: 2px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .milestone-item:nth-child(even) {
+            margin-left: auto;
+        }
+
+        .milestone-item::before {
+            content: '';
+            position: absolute;
+            top: 25px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--bg);
+            border: 4px solid var(--border2);
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        .milestone-item::after {
+            content: '';
+            position: absolute;
+            top: 33px;
+            height: 4px;
+            background: var(--border2);
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        /* Active milestone status */
+        .milestone-item.active-node {
+            border-color: var(--accent) !important;
+            transform: scale(1.02);
+            box-shadow: 0 8px 30px rgba(124, 109, 250, 0.2);
+        }
+        .milestone-item.active-node::before {
+            border-color: var(--accent);
+            box-shadow: 0 0 12px rgba(124, 109, 250, 0.5);
+            animation: rm-pulse 1.5s infinite;
+        }
+        .milestone-item.active-node::after {
+            background: var(--accent);
+        }
+
+        /* Completed milestone status */
+        .milestone-item.completed {
+            border-color: rgba(34, 211, 160, .8) !important;
+        }
+        .milestone-item.completed::before {
+            background: var(--green);
+            border-color: var(--green);
+        }
+        .milestone-item.completed::after {
+            background: var(--green);
+        }
+
+        /* Odd elements (left side) */
+        .milestone-item:nth-child(odd)::before {
+            right: -52px;
+        }
+
+        .milestone-item:nth-child(odd)::after {
+            right: -42px;
+            width: 42px;
+        }
+
+        /* Even elements (right side) */
+        .milestone-item:nth-child(even)::before {
+            left: -52px;
+        }
+
+        .milestone-item:nth-child(even)::after {
+            left: -42px;
+            width: 42px;
+        }
+
+        @media (max-width: 768px) {
+            #milestones-list::before {
+                left: 20px;
+            }
+            .milestone-item {
+                width: calc(100% - 60px) !important;
+                margin-left: 60px !important;
+            }
+            .milestone-item::before {
+                left: -50px !important;
+                right: auto !important;
+            }
+            .milestone-item::after {
+                left: -42px !important;
+                right: auto !important;
+            }
+        }
     </style>
 </head>
 
@@ -1545,7 +1668,11 @@
            describing the full roadmap for the user's goal.
         ======================= */
         async function generateRoadmapFromAI(goal) {
-            const prompt = `You are a goal planning AI. Create a detailed roadmap for someone who wants to: "${goal}".
+            const prompt = `You are an expert curriculum designer and goal planning AI. Create a highly detailed, extremely specific syllabus roadmap for someone who wants to: "${goal}".
+
+DO NOT use generic milestones like "Learn the Fundamentals" or "Build Projects".
+INSTEAD, use exact, concrete technical topics, sub-skills, frameworks, or specific concepts to study. (e.g. If the goal is Prompt Engineering, milestones should be "Core LLM Elements", "Prompt vs Context Engineering", "Prompt Techniques". Tasks should be "Study Temperature & Top-P", "Implement Few-Shot & CoT", "Explore Vector DBs"). 
+Every milestone and task MUST be a highly specific, tangible concept or action exactly tailored to mastering "${goal}".
 
 Return ONLY valid JSON (no markdown, no explanation) with this exact structure:
 {
@@ -1554,36 +1681,35 @@ Return ONLY valid JSON (no markdown, no explanation) with this exact structure:
   "milestones": [
     {
       "id": 1,
-      "title": "Milestone title",
+      "title": "Specific Topic/Concept title",
       "duration": "e.g. Month 1-2",
       "type": "short",
-      "description": "1 sentence",
+      "description": "1 sentence detail",
       "tasks": [
-        {"id": "t1", "title": "Task title", "due": "Week 1", "priority": "high", "done": false}
+        {"id": "t1", "title": "Specific sub-topic or implementation task", "due": "Week 1", "priority": "high", "done": false}
       ]
     }
   ],
   "dailyGoal": "Short motivational daily focus sentence",
   "dailyPlan": [
-    {"id": "d1", "title": "Task title", "time": "30 min", "priority": "high", "milestone": "Related milestone", "done": false}
+    {"id": "d1", "title": "Specific study/action task", "time": "30 min", "priority": "high", "milestone": "Related milestone", "done": false}
   ]
 }
 
 Generate 5-6 milestones (first 2-3 = short, rest = long). Each milestone: 3-4 tasks. Daily plan: 4-5 tasks.
 Be very specific to the goal "${goal}". Use "short" or "long" for type. Priority: "high", "medium", or "low".`;
 
-            const response = await fetch('https://api.anthropic.com/v1/messages', {
+            const response = await fetch(API_URL + '/ai/generate', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: 'claude-sonnet-4-20250514',
-                    max_tokens: 1800,
-                    messages: [{ role: 'user', content: prompt }]
-                })
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                },
+                body: JSON.stringify({ prompt: prompt })
             });
 
             const data = await response.json();
-            const text = data.content.map(c => c.text || '').join('');
+            const text = data.choices?.[0]?.message?.content || '';
             const clean = text.replace(/```json|```/g, '').trim();
             const parsed = JSON.parse(clean);
 
@@ -1604,50 +1730,40 @@ Be very specific to the goal "${goal}". Use "short" or "long" for type. Priority
         function useFallbackData(goal) {
             state.milestones = [
                 {
-                    id: 1, title: 'Learn the Fundamentals', duration: 'Month 1', type: 'short',
-                    description: 'Build a solid foundation in core concepts.',
+                    id: 1, title: 'Core Data Structures', duration: 'Month 1', type: 'short',
+                    description: 'Understand the building blocks of algorithms.',
                     tasks: [
-                        { id: 't1', title: 'Complete an online introductory course', due: 'Week 1', priority: 'high', done: false },
-                        { id: 't2', title: 'Read foundational books and resources', due: 'Week 2', priority: 'medium', done: false },
-                        { id: 't3', title: 'Build a simple practice project', due: 'Week 4', priority: 'high', done: false }
+                        { id: 't1', title: 'Implement Hash Maps & Collision Resolution', due: 'Week 1', priority: 'high', done: false },
+                        { id: 't2', title: 'Study Binary Search Trees (BST) & Balancing', due: 'Week 2', priority: 'medium', done: false },
+                        { id: 't3', title: 'Graph Traversal (BFS & DFS)', due: 'Week 4', priority: 'high', done: false }
                     ]
                 },
                 {
-                    id: 2, title: 'Build Core Skills', duration: 'Month 2–3', type: 'short',
-                    description: 'Hands-on skill development through projects.',
+                    id: 2, title: 'Advanced React Patterns', duration: 'Month 2–3', type: 'short',
+                    description: 'Deep dive into performance and state.',
                     tasks: [
-                        { id: 't4', title: 'Complete 3 practical projects', due: 'Week 6', priority: 'high', done: false },
-                        { id: 't5', title: 'Join an online community', due: 'Week 5', priority: 'low', done: false },
-                        { id: 't6', title: 'Start a personal portfolio', due: 'Week 8', priority: 'medium', done: false }
+                        { id: 't4', title: 'Master useMemo and useCallback internals', due: 'Week 6', priority: 'high', done: false },
+                        { id: 't5', title: 'Implement Custom React Hooks for data fetching', due: 'Week 5', priority: 'low', done: false },
+                        { id: 't6', title: 'React Server Components Architecture', due: 'Week 8', priority: 'medium', done: false }
                     ]
                 },
                 {
-                    id: 3, title: 'Apply Your Skills', duration: 'Month 4–6', type: 'long',
-                    description: 'Apply knowledge in real-world scenarios.',
+                    id: 3, title: 'System Design Fundamentals', duration: 'Month 4–6', type: 'long',
+                    description: 'Learn to scale complex applications.',
                     tasks: [
-                        { id: 't7', title: 'Build a substantial showcase project', due: 'Month 5', priority: 'high', done: false },
-                        { id: 't8', title: 'Seek mentorship or peer feedback', due: 'Month 4', priority: 'medium', done: false },
-                        { id: 't9', title: 'Document and share your work', due: 'Month 6', priority: 'medium', done: false }
-                    ]
-                },
-                {
-                    id: 4, title: 'Go Professional', duration: 'Month 7–12', type: 'long',
-                    description: 'Transition to a professional level.',
-                    tasks: [
-                        { id: 't10', title: 'Build a professional network', due: 'Month 8', priority: 'high', done: false },
-                        { id: 't11', title: 'Apply for opportunities', due: 'Month 10', priority: 'high', done: false },
-                        { id: 't12', title: 'Continuous learning & improvement', due: 'Ongoing', priority: 'medium', done: false }
+                        { id: 't7', title: 'Horizontal vs Vertical Scaling topologies', due: 'Month 5', priority: 'high', done: false },
+                        { id: 't8', title: 'Database Sharding & Partitioning strategies', due: 'Month 4', priority: 'medium', done: false },
+                        { id: 't9', title: 'Implement Redis Caching & Cache Invalidation', due: 'Month 6', priority: 'medium', done: false }
                     ]
                 }
             ];
             state.dailyTasks = [
-                { id: 'd1', title: 'Study for 1 hour', time: '60 min', priority: 'high', milestone: 'Learn the Fundamentals', done: false },
-                { id: 'd2', title: 'Practice hands-on exercises', time: '30 min', priority: 'high', milestone: 'Build Core Skills', done: false },
-                { id: 'd3', title: 'Review notes from yesterday', time: '15 min', priority: 'medium', milestone: 'Learn the Fundamentals', done: false },
-                { id: 'd4', title: 'Watch one tutorial video', time: '20 min', priority: 'medium', milestone: 'Build Core Skills', done: false }
+                { id: 'd1', title: 'Study Hash Map Collision techniques', time: '60 min', priority: 'high', milestone: 'Core Data Structures', done: false },
+                { id: 'd2', title: 'Refactor old component with Custom Hooks', time: '30 min', priority: 'high', milestone: 'Advanced React Patterns', done: false },
+                { id: 'd3', title: 'Review System Design Primer chapter 1', time: '15 min', priority: 'medium', milestone: 'System Design Fundamentals', done: false }
             ];
-            state.dailyGoal = 'Make meaningful progress every single day toward your goal.';
-            state.shortTermSummary = 'Focus on building a strong foundation through structured learning and small projects.';
+            state.dailyGoal = 'Master technical concepts piece by piece until fluency.';
+            state.shortTermSummary = 'Focus heavily on core foundation mechanics and intermediate framework patterns.';
             state.longTermSummary = 'Develop expertise, build a portfolio, and create professional opportunities.';
             initStreak();
         }
@@ -1944,12 +2060,14 @@ Be very specific to the goal "${goal}". Use "short" or "long" for type. Priority
                 ? state.milestones
                 : state.milestones.filter(m => m.type === filter);
 
-            document.getElementById('milestones-list').innerHTML = ms.map(m => {
+            document.getElementById('milestones-list').innerHTML = ms.map((m, i) => {
                 const done = m.tasks.every(t => t.done);
+                const prevDone = i === 0 || ms[i - 1].tasks.every(t => t.done);
+                const activeNode = !done && prevDone;
                 const pct = Math.round(m.tasks.filter(t => t.done).length / m.tasks.length * 100);
 
                 return `
-          <div class="milestone-item ${done ? 'completed' : ''}" id="m-${m.id}">
+          <div class="milestone-item ${done ? 'completed' : ''} ${activeNode ? 'active-node' : ''}" id="m-${m.id}">
             <div class="milestone-header">
               <div class="m-check ${done ? 'done' : ''}" onclick="toggleMilestone(${m.id})">
                 ${done ? checkIcon(12) : ''}
@@ -2122,6 +2240,19 @@ Be very specific to the goal "${goal}". Use "short" or "long" for type. Priority
             }
         }
 
+        async function handleDailyLogin() {
+            const today = getLocalYMD();
+            if (!state.activeDates.includes(today)) {
+                // It's a new day! Give them their streak point for logging in and fetch fresh AI tasks.
+                state.activeDates.push(today);
+                notify('🔥 Daily Streak Maintained!', `You logged in! Let's conquer the day.`, 'success');
+                saveState();
+                
+                // Automatically ask AI for new daily tasks based on goal
+                await generateDailyPlan();
+            }
+        }
+
         /** Toggle a single task inside a milestone */
         function toggleTask(milestoneId, taskId) {
             const m = state.milestones.find(m => m.id === milestoneId);
@@ -2237,17 +2368,16 @@ Be very specific to the goal "${goal}". Use "short" or "long" for type. Priority
                 const prompt = `Generate a fresh daily plan for someone working on: "${state.goal}". Pending tasks include: ${pending || 'general work'}.
 Return ONLY JSON: {"dailyPlan":[{"id":"d1","title":"task","time":"30 min","priority":"high","milestone":"area","done":false}], "dailyGoal": "motivational sentence"}. Make 4-5 specific, actionable tasks.`;
 
-                const resp = await fetch('https://api.anthropic.com/v1/messages', {
+                const resp = await fetch(API_URL + '/ai/generate', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: 'claude-sonnet-4-20250514',
-                        max_tokens: 600,
-                        messages: [{ role: 'user', content: prompt }]
-                    })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    },
+                    body: JSON.stringify({ prompt: prompt })
                 });
                 const data = await resp.json();
-                const text = data.content.map(c => c.text || '').join('');
+                const text = data.choices?.[0]?.message?.content || '';
                 const parsed = JSON.parse(text.replace(/\`\`\`json|\`\`\`/g, '').trim());
 
                 state.dailyTasks = parsed.dailyPlan || state.dailyTasks;
@@ -2325,6 +2455,7 @@ Return ONLY JSON: {"dailyPlan":[{"id":"d1","title":"task","time":"30 min","prior
             } else if (state.goal) {
                 document.getElementById('app').style.display = 'flex';
                 renderAll();
+                handleDailyLogin(); // Tracks daily login streak and updates AI plan!
                 scheduleNotifications();
             } else {
                 document.getElementById('onboard').style.display = 'flex';

@@ -205,7 +205,10 @@ Be very specific to the goal "${goal}". Use "short" or "long" for type. Priority
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + localStorage.getItem('token')
                 },
-                body: JSON.stringify({ prompt: prompt })
+                body: JSON.stringify({
+                    model: 'grok-beta',
+                    messages: [{ role: 'user', content: prompt }]
+                })
             });
 
             const data = await response.json();
@@ -874,7 +877,10 @@ Return ONLY JSON: {"dailyPlan":[{"id":"d1","title":"task","time":"30 min","prior
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + localStorage.getItem('token')
                     },
-                    body: JSON.stringify({ prompt: prompt })
+                    body: JSON.stringify({
+                        model: 'grok-beta',
+                        messages: [{ role: 'user', content: prompt }]
+                    })
                 });
                 const data = await resp.json();
                 const text = data.choices?.[0]?.message?.content || '';

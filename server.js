@@ -106,5 +106,54 @@ app.post('/api/state/sync', authMiddleware, async (req, res) => {
     }
 });
 
+// Secure AI Route
+app.post('/api/ai/generate', authMiddleware, async (req, res) => {
+    try {
+        if (!process.env.GOOGLE_API_KEY) {
+            return res.status(500).json({ error: 'GOOGLE_API_KEY is missing in server .env' });
+        }
+
+        const { prompt } = req.body;
+        if (!prompt) {
+            return res.status(400).json({ error: 'Prompt is required' });
+        }
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_API_KEY}`;
+        
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }]
+        };
+
+        const geminiRes = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await geminiRes.json();
+        
+        if (!geminiRes.ok) {
+            console.error('Gemini API Error:', data);
+            return res.status(geminiRes.status).json(data);
+        }
+
+        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        
+        // Return exactly the same layout the frontend expects from Grok/OpenAI format, so zero frontend changes are needed!
+        res.json({
+            choices: [{
+                message: {
+                    content: textResponse
+                }
+            }]
+        });
+    } catch (err) {
+        console.error('AI Proxy Error:', err);
+        res.status(500).json({ error: 'Internal Server Error forwarding request to AI' });
+    }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
